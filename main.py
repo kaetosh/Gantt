@@ -10,7 +10,8 @@ def generate_vacation_dates(start_date, num_days, num_vacations, vacation_type):
     for _ in range(num_vacations):
         start = start_date + timedelta(days=random.randint(0, num_days - 1))
         end = start + timedelta(days=random.randint(3, 14))  # Отпуск от 3 до 14 дней
-        vacations.append((start, end, vacation_type))
+        duration = (end - start).days  # Рассчитываем продолжительность отпуска
+        vacations.append((start, end, vacation_type, duration))
     return vacations
 
 
@@ -45,7 +46,8 @@ for employee in employees:
                 'Employee': employee,
                 'Start': vac[0],
                 'Finish': vac[1],
-                'Type': vac[2]
+                'Type': vac[2],
+                'Duration': vac[3]  # Добавляем продолжительность отпуска
             })
 
 # Создание DataFrame
@@ -70,6 +72,13 @@ for week in range(0, 52):
                   x1=week_start,
                   y1=len(employees) - 0.5,  # Конечная позиция Y
                   line=dict(color='LightGray', width=1, dash='dash'))
+
+# Настройка всплывающих подсказок
+fig.update_traces(hovertemplate='<b>Сотрудник:</b> %{customdata[0]}<br>' +
+                                '<b>Тип отпуска:</b> %{customdata[1]}<br>' +
+                                '<b>Начало:</b> %{x}<br>' +
+                                '<b>Продолжительность:</b> %{customdata[2]} дней<br>',
+                  customdata=df[['Employee', 'Type', 'Duration']].values)
 
 # Отображение графика
 fig.show()
