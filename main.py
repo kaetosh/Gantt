@@ -1,84 +1,144 @@
 import plotly.express as px
 import pandas as pd
 import random
-from datetime import datetime, timedelta
+import sys
 
 
-# Функция для генерации случайных дат отпуска
-def generate_vacation_dates(start_date, num_days, num_vacations, vacation_type):
-    vacations = []
-    for _ in range(num_vacations):
-        start = start_date + timedelta(days=random.randint(0, num_days - 1))
-        end = start + timedelta(days=random.randint(3, 14))  # Отпуск от 3 до 14 дней
-        duration = (end - start).days  # Рассчитываем продолжительность отпуска
-        vacations.append((start, end, vacation_type, duration))
-    return vacations
+def generate_pastel_color(background_color='lightgray'):
+    # Преобразуем цвет фона в RGB
+    bg_rgb = {
+        'lightgray': (211, 211, 211),
+        'lightyellow': (255, 255, 224),
+        # Добавьте другие цвета по мере необходимости
+    }.get(background_color, (211, 211, 211))
+
+    for _ in range(10000):
+        r = random.randint(200, 255)
+        g = random.randint(200, 255)
+        b = random.randint(200, 255)
+        # Проверяем контрастность
+        if abs(r - bg_rgb[0]) > 100 or abs(g - bg_rgb[1]) > 100 or abs(b - bg_rgb[2]) > 100:
+            return f'rgba({r}, {g}, {b}, 0.8)'  # Прозрачность 0.6 для пастельного оттенка
+    return f'rgba({r}, {g}, {b}, 0.8)'  # Прозрачность 0.6 для пастельного оттенка
+
+correct_columns = ['object', 'start', 'finish', 'data', 'legend_title', 'type_object', 'diagram_title', 'yaxis_title']
+
+def main():
+    print(f"""
+Убедитесь, что в папке со скриптом находится файл DataGant.xlsx.
+Убедитесь, что файл DataGant.xlsx содержит следующие столбцы:
+{correct_columns}.
+Убедитесь, что файл DataGant.xlsx содержит заполненную как минимум первую строку.
+Бары на графике окрашиваются в случайные цвета. Запускайте скрипт несколько раз, пока не получите удачный вариант.
+          """)
+    input('Для продолжения нажмите Enter или закройте программу.')
+
+    # читаем исходный файл
+    try:
+        df = pd.read_excel('DataGant.xlsx')
+    except Exception as e:
+        print(f'Ошибка при загрузки DataGant.xlsx: {e}')
+        print('Закройте программу и проверьте наличе файла DataGant.xlsx в папке со скриптом.')
+        input()
+        sys.exit()
+
+    # проверяем, что файл с исходными данными
+
+    if set(correct_columns) != set(df.columns):
+        print('Ошибка при загрузки DataGant.xlsx')
+        print(f'Закройте программу и проверьте наличе следующих столбцов в DataGant.xlsx: {correct_columns}.')
+        input()
+        sys.exit()
+
+    # проверяем, что в файле заполнена хотя бы одна строка
+    if df.iloc[0].isnull().any():
+        print('Ошибка при работе с DataGant.xlsx')
+        print('Закройте программу и проверьте наличе заполненной первой строки.')
+        input()
+        sys.exit()
 
 
-# Генерация данных для 25 сотрудников с фамилиями
-surnames = ['Иванов', 'Петров', 'Сидоров', 'Кузнецов', 'Смирнов',
-            'Попов', 'Васильев', 'Зайцев', 'Морозов', 'Лебедев',
-            'Соловьев', 'Борисов', 'Ковалев', 'Федоров', 'Григорьев',
-            'Семенов', 'Алексеев', 'Егоров', 'Тихонов', 'Михайлов',
-            'Кириллов', 'Сергеев', 'Денисов', 'Романов']
-employees = [f'{surname} {name}' for surname in surnames for name in ['Андрей', 'Мария', 'Елена', 'Игорь']][:25]
-data = []
+    # устанавливаем формат даты для столбцов с началом и окончанием объекта
+    df.start = pd.to_datetime(df.start)
+    df.finish = pd.to_datetime(df.finish)
 
-# Задаем начальную дату и количество дней в году
-start_date = datetime(2025, 1, 1)
-num_days = 365
+    # помечаем категории объектов рандомным цветом
+    unique_type_object = df.type_object.unique()
+    color_map = {i: generate_pastel_color() for i in unique_type_object}
+    df['colors'] = df.type_object.map(color_map)
 
-for employee in employees:
-    # Генерируем от 1 до 2 отпусков для каждого сотрудника
-    num_vacations = random.randint(1, 2)
+    # создаем график
+    fig = px.timeline(df,
+                      x_start="start",
+                      x_end="finish",
+                      y="object",
+                      color="type_object",
+                      hover_name='data',
+                      color_discrete_map=color_map,
+                      title = df.diagram_title[0],
+                      color_discrete_sequence=px.colors.qualitative.Plotly,
+                      hover_data={'data': False,
+                                  'start': False,
+                                  'finish': False,
+                                  'object': False,
+                                  'type_object': False})
+    fig.update_yaxes(autorange="reversed") # в противном случае задачи перечисляются снизу вверх
 
-    # Случайно выбираем тип отпуска
-    for _ in range(num_vacations):
-        if random.choice([True, False]):
-            vacation_type = 'Отпуск по графику'
-        else:
-            vacation_type = 'Отпуск по беременности и родам'
+    # Добавление вертикальных линий для разграничения недель
+    start_date = df.start.min()
+    end_date = df.finish.max()
 
-        vacations = generate_vacation_dates(start_date, num_days, 1, vacation_type)
+    # Находим первую понедельник перед минимальной датой
+    first_monday = start_date - pd.Timedelta(days=start_date.weekday())
 
-        for vac in vacations:
-            data.append({
-                'Employee': employee,
-                'Start': vac[0],
-                'Finish': vac[1],
-                'Type': vac[2],
-                'Duration': vac[3]  # Добавляем продолжительность отпуска
-            })
+    # Добавляем линии для каждой недели от первого понедельника до последнего воскресенья
+    # for i in range((end_date - first_monday).days // 7+1):
+    #     week_start = first_monday + pd.Timedelta(weeks=i)
+    #     fig.add_shape(type="line",
+    #                   x0=week_start,
+    #                   y0=0,
+    #                   x1=week_start,
+    #                   y1=len(df.object.unique()),
+    #                   line=dict(color="White", width=2, dash="dash"))
+        # Добавление подписи с датой
+        # fig.add_annotation(
+        #     x=week_start,
+        #     y=len(df.object.unique()),  # Позиция по оси Y для аннотации
+        #     text=week_start.strftime('%d.%m'),  # Формат даты
+        #     showarrow=False,
+        #     font=dict(size=10),
+        #     xanchor='center',
+        #     textangle=45
+        # )
+        # Добавление подписи с датой
 
-# Создание DataFrame
-df = pd.DataFrame(data)
 
-# Создание диаграммы Ганта с пастельными тонами
-fig = px.timeline(df, x_start='Start', x_end='Finish', y='Employee', title='Годовой график отпусков',
-                  color='Type', color_discrete_sequence=px.colors.qualitative.Pastel)
 
-# Настройка фона
-fig.update_layout(plot_bgcolor='white', paper_bgcolor='white', font_color='black')
+    tickvals_list = []
+    ticktext_list = []
+    for i in range((end_date - first_monday).days // 7+1):
+        week_start = first_monday + pd.Timedelta(weeks=i)
+        tickvals_list.append(week_start)
+        ticktext_list.append(week_start.strftime('%d.%m.%y'))
 
-# Инвертируем ось Y
-fig.update_yaxes(title='', autorange='reversed')
+    # Определяем начало и конец недели
+    fig.update_xaxes(
+    tickvals=tickvals_list,  # Здесь добавьте ваши даты
+    ticktext=ticktext_list  # Формат отображаемой даты
+)
+    # Настройки внешнего вида
+    fig.update_layout(
+        title_font=dict(size=24),
+        yaxis_title = df.yaxis_title[0],
+        legend_title = df.legend_title[0],
+        hoverlabel = dict(bgcolor="white", font_size=12, font_family="Arial"),
+    )
 
-# Добавление горизонтальных линий по неделям
-for week in range(0, 52):
-    week_start = start_date + timedelta(weeks=week)
-    fig.add_shape(type='line',
-                  x0=week_start,
-                  y0=-0.5,  # Начальная позиция Y
-                  x1=week_start,
-                  y1=len(employees) - 0.5,  # Конечная позиция Y
-                  line=dict(color='LightGray', width=1, dash='dash'))
 
-# Настройка всплывающих подсказок
-fig.update_traces(hovertemplate='<b>Сотрудник:</b> %{customdata[0]}<br>' +
-                                '<b>Тип отпуска:</b> %{customdata[1]}<br>' +
-                                '<b>Начало:</b> %{x}<br>' +
-                                '<b>Продолжительность:</b> %{customdata[2]} дней<br>',
-                  customdata=df[['Employee', 'Type', 'Duration']].values)
+    fig.update_layout(plot_bgcolor='#66CCCC')
+    fig.write_html("project_timeline.html")
+    print('Проверьте файл project_timeline.html в текущей папке.')
+    input('Программу можно закрыть.')
 
-# Отображение графика
-fig.show()
+if __name__ == "__main__":
+   main()
