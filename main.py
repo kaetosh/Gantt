@@ -3,23 +3,22 @@ import pandas as pd
 import random
 import sys
 
-
 def generate_pastel_color(background_color='lightgray'):
     # Преобразуем цвет фона в RGB
     bg_rgb = {
         'lightgray': (211, 211, 211),
         'lightyellow': (255, 255, 224),
-        # Добавьте другие цвета по мере необходимости
     }.get(background_color, (211, 211, 211))
 
+    r, g, b = 0, 0, 0  # Инициализируем переменные
     for _ in range(10000):
         r = random.randint(200, 255)
         g = random.randint(200, 255)
         b = random.randint(200, 255)
         # Проверяем контрастность
         if abs(r - bg_rgb[0]) > 100 or abs(g - bg_rgb[1]) > 100 or abs(b - bg_rgb[2]) > 100:
-            return f'rgba({r}, {g}, {b}, 0.8)'  # Прозрачность 0.6 для пастельного оттенка
-    return f'rgba({r}, {g}, {b}, 0.8)'  # Прозрачность 0.6 для пастельного оттенка
+            return f'rgba({r}, {g}, {b}, 0.8)'  # Прозрачность для пастельного оттенка
+    return f'rgba({r}, {g}, {b}, 0.8)'  # Прозрачность для пастельного оттенка
 
 correct_columns = ['object', 'start', 'finish', 'data', 'legend_title', 'type_object', 'diagram_title', 'yaxis_title']
 
@@ -33,7 +32,6 @@ def main():
           """)
     input('Для продолжения нажмите Enter или закройте программу.')
 
-    # читаем исходный файл
     try:
         df = pd.read_excel('DataGant.xlsx')
     except Exception as e:
@@ -43,7 +41,6 @@ def main():
         sys.exit()
 
     # проверяем, что файл с исходными данными
-
     if set(correct_columns) != set(df.columns):
         print('Ошибка при загрузки DataGant.xlsx')
         print(f'Закройте программу и проверьте наличе следующих столбцов в DataGant.xlsx: {correct_columns}.')
@@ -56,7 +53,6 @@ def main():
         print('Закройте программу и проверьте наличе заполненной первой строки.')
         input()
         sys.exit()
-
 
     # устанавливаем формат даты для столбцов с началом и окончанием объекта
     df.start = pd.to_datetime(df.start)
@@ -88,31 +84,8 @@ def main():
     start_date = df.start.min()
     end_date = df.finish.max()
 
-    # Находим первую понедельник перед минимальной датой
+    # Находим первый понедельник перед минимальной датой
     first_monday = start_date - pd.Timedelta(days=start_date.weekday())
-
-    # Добавляем линии для каждой недели от первого понедельника до последнего воскресенья
-    # for i in range((end_date - first_monday).days // 7+1):
-    #     week_start = first_monday + pd.Timedelta(weeks=i)
-    #     fig.add_shape(type="line",
-    #                   x0=week_start,
-    #                   y0=0,
-    #                   x1=week_start,
-    #                   y1=len(df.object.unique()),
-    #                   line=dict(color="White", width=2, dash="dash"))
-        # Добавление подписи с датой
-        # fig.add_annotation(
-        #     x=week_start,
-        #     y=len(df.object.unique()),  # Позиция по оси Y для аннотации
-        #     text=week_start.strftime('%d.%m'),  # Формат даты
-        #     showarrow=False,
-        #     font=dict(size=10),
-        #     xanchor='center',
-        #     textangle=45
-        # )
-        # Добавление подписи с датой
-
-
 
     tickvals_list = []
     ticktext_list = []
@@ -123,8 +96,8 @@ def main():
 
     # Определяем начало и конец недели
     fig.update_xaxes(
-    tickvals=tickvals_list,  # Здесь добавьте ваши даты
-    ticktext=ticktext_list  # Формат отображаемой даты
+    tickvals=tickvals_list,
+    ticktext=ticktext_list
 )
     # Настройки внешнего вида
     fig.update_layout(
@@ -133,7 +106,6 @@ def main():
         legend_title = df.legend_title[0],
         hoverlabel = dict(bgcolor="white", font_size=12, font_family="Arial"),
     )
-
 
     fig.update_layout(plot_bgcolor='#66CCCC')
     fig.write_html("project_timeline.html")
