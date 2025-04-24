@@ -95,13 +95,15 @@ class HeaderApp(App):
         Сформированная диаграмма Ганта будет сохранена под именем project_timeline.html и расположена в папке, откуда запущен Ganttify.
         Чтобы вернуться к редактированию DataGant.xlsx, нажмите ctrl+r"""
         central_widget.update(text)
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
         self.loading_indicator.visible = False  # Скрываем индикатор загрузки после завершения
 
     async def action_open_diagram(self) -> None:
         central_widget = self.query_one('#example')
-        self.loading_indicator.visible = True  # Показываем индикатор загрузки
         central_widget.mount(self.loading_indicator)
+        self.loading_indicator.visible = True  # Показываем индикатор загрузки
+        await asyncio.sleep(2)
+
 
         try:
             df = pd.read_excel('DataGant.xlsx')
@@ -130,7 +132,6 @@ class HeaderApp(App):
                       Возможно файл был перемещен или удален.
                       Нажмите ctrl+r, чтобы снова сформировать и открыть для редактирования DataGant.xlsx"""
             self.query_one('#example').update(text)
-        await asyncio.sleep(3)
         self.loading_indicator.visible = False  # Скрываем индикатор загрузки после завершения
 
 if __name__ == "__main__":
