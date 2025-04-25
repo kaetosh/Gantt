@@ -2,7 +2,8 @@ import os
 
 import plotly.express as px
 import pandas as pd
-import random
+import numpy as np
+
 
 def generate_pastel_color(background_color='lightgray'):
     # Преобразуем цвет фона в RGB
@@ -11,47 +12,57 @@ def generate_pastel_color(background_color='lightgray'):
         'lightyellow': (255, 255, 224),
     }.get(background_color, (211, 211, 211))
 
-    r, g, b = 0, 0, 0  # Инициализируем переменные
-    for _ in range(10000):
-        r = random.randint(200, 255)
-        g = random.randint(200, 255)
-        b = random.randint(200, 255)
-        # Проверяем контрастность
-        if abs(r - bg_rgb[0]) > 100 or abs(g - bg_rgb[1]) > 100 or abs(b - bg_rgb[2]) > 100:
-            return f'rgba({r}, {g}, {b}, 0.8)'  # Прозрачность для пастельного оттенка
-    return f'rgba({r}, {g}, {b}, 0.8)'  # Прозрачность для пастельного оттенка
+    # Генерируем 10000 случайных цветов
+    random_colors = np.random.randint(200, 256, size=(10000, 3))
+
+    # Вычисляем абсолютные разности с фоновым цветом
+    contrast = np.abs(random_colors - bg_rgb)
+
+    # Проверяем, какие цвета соответствуют критерию контрастности
+    valid_colors = random_colors[(contrast[:, 0] > 100) | (contrast[:, 1] > 100) | (contrast[:, 2] > 100)]
+
+    if valid_colors.size > 0:
+        # Возвращаем первый подходящий цвет с прозрачностью
+        r, g, b = valid_colors[0]
+        return f'rgba({r}, {g}, {b}, 1)'
+
+    # Если не найден ни один подходящий цвет, возвращаем последний сгенерированный
+    r, g, b = random_colors[-1]
+    return f'rgba({r}, {g}, {b}, 1)'
+
 
 def chart_write_html(df):
 
     # устанавливаем формат даты для столбцов с началом и окончанием объекта
-    df.start = pd.to_datetime(df.start, format='%d.%m.%Y')
-    df.finish = pd.to_datetime(df.finish, format='%d.%m.%Y')
+    df['старт'] = pd.to_datetime(df['старт'], format='%d.%m.%Y')
+    df['финиш'] = pd.to_datetime(df['финиш'], format='%d.%m.%Y')
 
     # помечаем категории объектов рандомным цветом
-    unique_type_object = df.type_object.unique()
+    unique_type_object = df['признак_объекта'].unique()
+
     color_map = {i: generate_pastel_color() for i in unique_type_object}
-    df['colors'] = df.type_object.map(color_map)
+    df['colors'] = df['признак_объекта'].map(color_map)
 
     # создаем график
     fig = px.timeline(df,
-                      x_start="start",
-                      x_end="finish",
-                      y="object",
-                      color="type_object",
-                      hover_name='data',
+                      x_start="старт",
+                      x_end="финиш",
+                      y="объект",
+                      color="признак_объекта",
+                      hover_name='данные',
                       color_discrete_map=color_map,
-                      title=df.diagram_title[0],
+                      title=df['имя_диаграммы'][0],
                       color_discrete_sequence=px.colors.qualitative.Plotly,
-                      hover_data={'data': False,
-                                  'start': False,
-                                  'finish': False,
-                                  'object': False,
-                                  'type_object': False})
+                      hover_data={'данные': False,
+                                  'старт': False,
+                                  'финиш': False,
+                                  'объект': False,
+                                  'признак_объекта': False})
     fig.update_yaxes(autorange="reversed")  # в противном случае задачи перечисляются снизу вверх
 
-    # Добавление вертикальных линий для разграничения недель
-    start_date = df.start.min()
-    end_date = df.finish.max()
+    # # Добавление вертикальных линий для разграничения недель
+    start_date = df['старт'].min()
+    end_date = df['финиш'].max()
 
     # Находим первый понедельник перед минимальной датой
     first_monday = start_date - pd.Timedelta(days=start_date.weekday())
@@ -61,7 +72,7 @@ def chart_write_html(df):
     for i in range((end_date - first_monday).days // 7 + 1):
         week_start = first_monday + pd.Timedelta(weeks=i)
         tickvals_list.append(week_start)
-        ticktext_list.append(week_start.strftime('%d.%m.%y'))
+        ticktext_list.append(week_start.strftime('%d.%m.%Y'))
 
     # Определяем начало и конец недели
     fig.update_xaxes(
@@ -71,8 +82,8 @@ def chart_write_html(df):
     # Настройки внешнего вида
     fig.update_layout(
         title_font=dict(size=24),
-        yaxis_title=df.yaxis_title[0],
-        legend_title=df.legend_title[0],
+        yaxis_title=df['имя_вертикали'][0],
+        legend_title=df['имя_легенды'][0],
         hoverlabel=dict(bgcolor="white", font_size=12, font_family="Arial"),
     )
 
