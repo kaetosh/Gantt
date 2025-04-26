@@ -43,11 +43,11 @@ class HeaderApp(App):
 
     def compose(self) -> ComposeResult:
         self.loading_indicator = LoadingIndicator(classes='indicator')
-        yield Header(show_clock=True, icon='*')
+        yield self.loading_indicator
+        yield Header(show_clock=True, icon='<>')
         yield Footer()
         yield Static(TEXT_INTRODUCTION, classes='introduction')
         yield Static(TEXT_DATAGANTFILE, id='example', classes='steps')
-        yield self.loading_indicator
 
     def on_mount(self) -> None:
         self.title = "Ganttify"
@@ -57,7 +57,6 @@ class HeaderApp(App):
     async def action_open_file(self) -> None:
         self.loading_indicator.visible = True
         await asyncio.sleep(2)
-        self.loading_indicator.visible = False
 
         central_widget = self.query_one('#example')
         central_widget.update(TEXT_OPEN_DATAGANTFILE)
@@ -66,11 +65,11 @@ class HeaderApp(App):
             example_file = pd.DataFrame(EXAMPLE)
             example_file.to_excel('DataGant.xlsx', index=False)
         os.startfile('DataGant.xlsx')
+        self.loading_indicator.visible = False
 
     async def action_open_diagram(self) -> None:
         self.loading_indicator.visible = True
         await asyncio.sleep(2)
-        self.loading_indicator.visible = False
 
         central_widget = self.query_one('#example')
 
@@ -97,6 +96,7 @@ class HeaderApp(App):
                     self.query_one('#example').update(TEXT_ERR_CREATE_CHART)
         except FileNotFoundError:
             self.query_one('#example').update(TEXT_DATAGANTFILE_NOT_FIND)
+        self.loading_indicator.visible = False
 
 if __name__ == "__main__":
     app = HeaderApp()

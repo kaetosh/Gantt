@@ -5,12 +5,9 @@ import pandas as pd
 import numpy as np
 
 
-def generate_pastel_color(background_color='lightgray'):
+def generate_pastel_color() -> str:
     # Преобразуем цвет фона в RGB
-    bg_rgb = {
-        'lightgray': (211, 211, 211),
-        'lightyellow': (255, 255, 224),
-    }.get(background_color, (211, 211, 211))
+    bg_rgb = (211, 211, 211)
 
     # Генерируем 10000 случайных цветов
     random_colors = np.random.randint(200, 256, size=(10000, 3))
@@ -31,7 +28,7 @@ def generate_pastel_color(background_color='lightgray'):
     return f'rgba({r}, {g}, {b}, 1)'
 
 
-def chart_write_html(df):
+def chart_write_html(df: pd.DataFrame) -> bool:
 
     # устанавливаем формат даты для столбцов с началом и окончанием объекта
     df['старт'] = pd.to_datetime(df['старт'], format='%d.%m.%Y')
