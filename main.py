@@ -17,7 +17,8 @@ from data_text import (correct_columns,
                        TEXT_MISSING_DATA_COL,
                        TEXT_CREATE_CHART,
                        TEXT_ERR_CREATE_CHART,
-                       TEXT_DATAGANTFILE_NOT_FIND)
+                       TEXT_DATAGANTFILE_NOT_FIND,
+                       TEXT_APP_EXCEL_NOT_FIND)
 
 class HeaderApp(App):
     CSS = """
@@ -64,7 +65,11 @@ class HeaderApp(App):
         if not os.path.isfile('DataGant.xlsx'):
             example_file = pd.DataFrame(EXAMPLE)
             example_file.to_excel('DataGant.xlsx', index=False)
-        os.startfile('DataGant.xlsx')
+        try:
+            os.startfile('DataGant.xlsx')
+        except OSError as e:
+            error_message = TEXT_APP_EXCEL_NOT_FIND.format(error_app_xls=e)
+            central_widget.update(error_message)
         self.loading_indicator.visible = False
 
     async def action_open_diagram(self) -> None:
