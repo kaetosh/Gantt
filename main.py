@@ -31,6 +31,7 @@ class HeaderApp(App):
         border: solid green;
     }
     .indicator {
+    dock: bottom;
         height: auto;
     }
     """
@@ -44,11 +45,11 @@ class HeaderApp(App):
 
     def compose(self) -> ComposeResult:
         self.loading_indicator = LoadingIndicator(classes='indicator')
-        yield self.loading_indicator
         yield Header(show_clock=True, icon='<>')
         yield Footer()
         yield Static(TEXT_INTRODUCTION, classes='introduction')
         yield Static(TEXT_DATAGANTFILE, id='example', classes='steps')
+        yield self.loading_indicator
 
     def on_mount(self) -> None:
         self.title = "Ganttify"
